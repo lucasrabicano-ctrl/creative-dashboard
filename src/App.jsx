@@ -173,16 +173,46 @@ export default function App() {
         throw new Error('Planilha vazia ou sem dados válidos.');
       }
 
-      // Mapeamento exato das colunas
+      // ── DEBUG: mostrar colunas encontradas no console ─────────────────
+      const todasColunas = Object.keys(rawData[0]);
+      console.log('COLUNAS ENCONTRADAS:', todasColunas);
+
+      // ── Busca inteligente de colunas ──────────────────────────────────
+      const colunaCriativo = todasColunas.find(c =>
+        c.includes('Criativo') || c.includes('criativo') ||
+        c.includes('Campanha') || c.includes('Anúncio') || c.includes('Anuncio')
+      );
+      const colunaConsultor = todasColunas.find(c =>
+        c.toUpperCase().includes('CONSULTOR')
+      );
+      const colunaQualificado = todasColunas.find(c =>
+        c.toUpperCase().includes('QUALIFICADO')
+      );
+      const colunaEmail = todasColunas.find(c =>
+        c.toLowerCase().includes('email') || c.toLowerCase().includes('e-mail')
+      );
+
+      console.log('Coluna Criativo   :', colunaCriativo);
+      console.log('Coluna Consultor  :', colunaConsultor);
+      console.log('Coluna Qualificado:', colunaQualificado);
+      console.log('Coluna Email      :', colunaEmail);
+
+      if (!colunaCriativo) {
+        alert(
+          '❌ ERRO: Coluna de Criativo não encontrada!\n\n' +
+          'Colunas disponíveis na planilha:\n' +
+          todasColunas.join('\n')
+        );
+        setLoading(false);
+        return;
+      }
+
+      // ── Processar cada linha usando colunas detectadas ─────────────────
       const dadosProcessados = rawData.map(row => ({
-        criativo: (row['Campanha / Conjunto de anúncios / Criativo Convertido'] || 'SEM NOME')
-          .toUpperCase()
-          .trim(),
-        consultor: (row['CONSULTOR '] || 'SEM CONSULTOR') // ESPAÇO NO FINAL!
-          .toUpperCase()
-          .trim(),
-        qualificado: normalizarQualificacao(row['QUALIFICADO?']),
-        email: String(row['Email'] || '').toLowerCase().trim(),
+        criativo: String(row[colunaCriativo] || 'SEM NOME').toUpperCase().trim(),
+        consultor: String(row[colunaConsultor] || 'SEM CONSULTOR').toUpperCase().trim(),
+        qualificado: normalizarQualificacao(row[colunaQualificado] || ''),
+        email: String(row[colunaEmail] || '').toLowerCase().trim(),
       }));
 
       // Remover duplicatas por email
