@@ -2,7 +2,7 @@ import React, { useCallback } from 'react';
 import { UploadCloud, FileText, X, AlertCircle } from 'lucide-react';
 import styles from './Upload.module.css';
 
-export default function Upload({ onFile, loading, error, hasData, onReset }) {
+export default function Upload({ onFile, onDemo, loading, error, hasData, onReset }) {
   const handleDrop = useCallback((e) => {
     e.preventDefault();
     const file = e.dataTransfer?.files?.[0];
@@ -72,8 +72,8 @@ export default function Upload({ onFile, loading, error, hasData, onReset }) {
       </div>
       <button
         className={styles.demoBtn}
-        onClick={() => onFile(null)}
-        disabled={loading}
+        onClick={onDemo}
+        disabled={loading || !onDemo}
       >
         Usar dados de demonstração
       </button>

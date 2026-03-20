@@ -1,82 +1,33 @@
 import { useState, useCallback, useMemo } from 'react';
 import * as XLSX from 'xlsx';
-import { DollarSign, MousePointerClick, Eye, TrendingUp, Image, Zap } from 'lucide-react';
+import { Users, CheckCircle, XCircle, TrendingUp } from 'lucide-react';
 import KPICard from './components/KPICard/KPICard';
 import Upload from './components/Upload/Upload';
-import CreativeTable from './components/CreativeTable/CreativeTable';
-import Charts from './components/Charts/Charts';
 import ExportButton from './components/ExportButton/ExportButton';
-import { fmt } from './utils/format';
+import QualPieChart from './components/QualPieChart/QualPieChart';
+import ChampionCards from './components/ChampionCards/ChampionCards';
 import './App.css';
 
-// ── Demo data ──────────────────────────────────────────────────────────────
-const DEMO_ROWS = [
-  { creative: 'UGC_Café_01', format: 'Reels', spend: 4200, impressions: 320000, clicks: 8400, conversions: 210, revenue: 18900 },
-  { creative: 'Estático_Promo_B', format: 'Feed', spend: 2800, impressions: 190000, clicks: 4750, conversions: 142, revenue: 9940 },
-  { creative: 'Carrossel_Reviews', format: 'Carrossel', spend: 3100, impressions: 250000, clicks: 6250, conversions: 175, revenue: 15750 },
-  { creative: 'UGC_Unboxing_02', format: 'Reels', spend: 5600, impressions: 480000, clicks: 12000, conversions: 336, revenue: 30240 },
-  { creative: 'Estático_Branding_A', format: 'Feed', spend: 1900, impressions: 140000, clicks: 2800, conversions: 70, revenue: 4200 },
-  { creative: 'Vídeo_Depoimento', format: 'Story', spend: 3400, impressions: 210000, clicks: 5250, conversions: 131, revenue: 11790 },
-  { creative: 'Carrossel_Produtos', format: 'Carrossel', spend: 2200, impressions: 175000, clicks: 4375, conversions: 109, revenue: 7630 },
-  { creative: 'UGC_Tutorial_03', format: 'Reels', spend: 6100, impressions: 520000, clicks: 15600, conversions: 448, revenue: 40320 },
-  { creative: 'Estático_Oferta_C', format: 'Feed', spend: 1600, impressions: 120000, clicks: 2400, conversions: 60, revenue: 3600 },
-  { creative: 'Vídeo_Animado_01', format: 'Story', spend: 2900, impressions: 230000, clicks: 5750, conversions: 144, revenue: 12960 },
-];
+// ── 2. FUNÇÃO DE NORMALIZAÇÃO DE QUALIFICAÇÃO ─────────────────────────────
+const normalizarQualificacao = (valor) => {
+  if (!valor || String(valor).trim() === '') return 'Não Preenchido';
+  const v = String(valor).toLowerCase().trim();
 
-// ── Column map aliases ─────────────────────────────────────────────────────
-const COL_ALIASES = {
-  creative: ['creative', 'criativo', 'name', 'nome', 'ad name', 'ad_name', 'creative name'],
-  format: ['format', 'formato', 'type', 'tipo', 'ad format'],
-  spend: ['spend', 'gasto', 'cost', 'custo', 'amount spent', 'valor gasto'],
-  impressions: ['impressions', 'impressões', 'impress'],
-  clicks: ['clicks', 'cliques', 'link clicks'],
-  conversions: ['conversions', 'conversões', 'purchases', 'compras', 'results'],
-  revenue: ['revenue', 'receita', 'purchase value', 'valor de compra', 'amount', 'roas value'],
-};
+  // Qualificado
+  if (v.includes('sim') || v.includes('qualif')) return 'Qualificado';
 
-function findColumn(headers, key) {
-  const aliases = COL_ALIASES[key];
-  return headers.find(h => aliases.some(a => h.toLowerCase().trim().includes(a)));
-}
-
-function parseRows(sheetData) {
-  if (!sheetData || sheetData.length < 2) return [];
-  const [header, ...rows] = sheetData;
-  const headers = header.map((h) => String(h ?? ''));
-  const colMap = {};
-  for (const key of Object.keys(COL_ALIASES)) {
-    colMap[key] = findColumn(headers, key);
+  // Não Qualificado
+  if (
+    v.includes('não') || v.includes('nao') || v.includes('emprest') ||
+    v.includes('errado') || v.includes('bloq') || v.includes('interesse')
+  ) {
+    return 'Não Qualificado';
   }
 
-  return rows
-    .map((row) => {
-      const obj = {};
-      headers.forEach((h, i) => { obj[h] = row[i]; });
-      const parsed = {};
-      for (const key of Object.keys(COL_ALIASES)) {
-        const col = colMap[key];
-        const val = col !== undefined ? obj[col] : undefined;
-        parsed[key] = ['spend', 'impressions', 'clicks', 'conversions', 'revenue'].includes(key)
-          ? parseFloat(String(val ?? '').replace(/[^0-9.-]/g, '')) || 0
-          : String(val ?? '').trim() || '—';
-      }
-      return parsed;
-    })
-    .filter((r) => r.creative && r.creative !== '—');
-}
+  return 'Não Preenchido';
+};
 
-function deriveMetrics(rows) {
-  return rows.map((r) => ({
-    ...r,
-    ctr: r.impressions > 0 ? (r.clicks / r.impressions) * 100 : 0,
-    cpc: r.clicks > 0 ? r.spend / r.clicks : 0,
-    cpa: r.conversions > 0 ? r.spend / r.conversions : 0,
-    roas: r.spend > 0 ? r.revenue / r.spend : 0,
-    cvr: r.clicks > 0 ? (r.conversions / r.clicks) * 100 : 0,
-  }));
-}
-
-// ── Styles inlined ─────────────────────────────────────────────────────────
+// ── Estilos ────────────────────────────────────────────────────────────────
 const S = {
   app: {
     minHeight: '100vh',
@@ -160,30 +111,131 @@ const S = {
     letterSpacing: '0.08em',
     color: 'var(--text-muted)',
   },
+  // Tabela
+  tableWrap: {
+    overflowX: 'auto',
+    borderRadius: 10,
+    border: '1px solid var(--border)',
+  },
+  table: {
+    width: '100%',
+    borderCollapse: 'collapse',
+    fontSize: 13,
+  },
+  th: {
+    padding: '10px 14px',
+    textAlign: 'left',
+    fontWeight: 600,
+    fontSize: 11,
+    textTransform: 'uppercase',
+    letterSpacing: '0.06em',
+    color: 'var(--text-muted)',
+    background: 'rgba(255,255,255,0.03)',
+    borderBottom: '1px solid var(--border)',
+    whiteSpace: 'nowrap',
+  },
+  td: {
+    padding: '10px 14px',
+    borderBottom: '1px solid rgba(255,255,255,0.05)',
+    color: 'var(--text-primary)',
+    verticalAlign: 'middle',
+  },
+  errorBox: {
+    background: 'rgba(239,68,68,0.1)',
+    border: '1px solid rgba(239,68,68,0.3)',
+    borderRadius: 8,
+    padding: '12px 16px',
+    color: '#f87171',
+    fontSize: 13,
+  },
 };
 
 // ── App ────────────────────────────────────────────────────────────────────
 export default function App() {
-  const [rows, setRows] = useState(null);
+  const [dados, setDados] = useState(null); // dados processados (leads únicos)
+  const [criativos, setCriativos] = useState(null); // agrupados por criativo
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  const handleFile = useCallback(async (file) => {
-    if (!file) {
-      setRows(deriveMetrics(DEMO_ROWS));
-      setError(null);
-      return;
-    }
+  // ── 1. LEITURA CORRETA DA PLANILHA ───────────────────────────────────────
+  const processarPlanilha = useCallback(async (file) => {
+    if (!file) return;
     setLoading(true);
     setError(null);
+
     try {
       const ab = await file.arrayBuffer();
       const wb = XLSX.read(ab, { type: 'array' });
       const ws = wb.Sheets[wb.SheetNames[0]];
-      const data = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
-      const parsed = parseRows(data);
-      if (parsed.length === 0) throw new Error('Nenhuma linha válida encontrada. Verifique as colunas do arquivo.');
-      setRows(deriveMetrics(parsed));
+      const rawData = XLSX.utils.sheet_to_json(ws, { defval: '' });
+
+      if (rawData.length === 0) {
+        throw new Error('Planilha vazia ou sem dados válidos.');
+      }
+
+      // Mapeamento exato das colunas
+      const dadosProcessados = rawData.map(row => ({
+        criativo: (row['Campanha / Conjunto de anúncios / Criativo Convertido'] || 'SEM NOME')
+          .toUpperCase()
+          .trim(),
+        consultor: (row['CONSULTOR '] || 'SEM CONSULTOR') // ESPAÇO NO FINAL!
+          .toUpperCase()
+          .trim(),
+        qualificado: normalizarQualificacao(row['QUALIFICADO?']),
+        email: (row['Email'] || '').toLowerCase().trim(),
+      }));
+
+      // Remover duplicatas por email
+      const emailsVistos = new Set();
+      const unicos = dadosProcessados.filter(lead => {
+        if (!lead.email) return true; // sem email, mantém sempre
+        if (emailsVistos.has(lead.email)) return false;
+        emailsVistos.add(lead.email);
+        return true;
+      });
+
+      setDados(unicos);
+
+      // ── 3. PROCESSAMENTO COM 3 CATEGORIAS ─────────────────────────────
+      const agrupado = {};
+      unicos.forEach(lead => {
+        if (!agrupado[lead.criativo]) {
+          agrupado[lead.criativo] = {
+            nome: lead.criativo,
+            total: 0,
+            qualificados: 0,
+            naoQualificados: 0,
+            naoPreenchidos: 0,
+          };
+        }
+
+        agrupado[lead.criativo].total++;
+
+        if (lead.qualificado === 'Qualificado') {
+          agrupado[lead.criativo].qualificados++;
+        } else if (lead.qualificado === 'Não Qualificado') {
+          agrupado[lead.criativo].naoQualificados++;
+        } else {
+          agrupado[lead.criativo].naoPreenchidos++;
+        }
+      });
+
+      // ── 4. CÁLCULO CORRETO DA TAXA ────────────────────────────────────
+      const criativosArray = Object.values(agrupado).map(c => {
+        const avaliados = c.qualificados + c.naoQualificados;
+        const taxa = avaliados > 0 ? (c.qualificados / avaliados * 100).toFixed(1) : 0;
+
+        return {
+          ...c,
+          taxa: parseFloat(taxa),
+          badge: taxa >= 15 ? '🟢' : taxa >= 5 ? '🟡' : '🔴',
+        };
+      });
+
+      // Ordenar por taxa desc
+      criativosArray.sort((a, b) => b.taxa - a.taxa);
+      setCriativos(criativosArray);
+
     } catch (e) {
       setError(e.message || 'Erro ao processar arquivo');
     } finally {
@@ -192,28 +244,80 @@ export default function App() {
   }, []);
 
   const handleReset = useCallback(() => {
-    setRows(null);
+    setDados(null);
+    setCriativos(null);
     setError(null);
   }, []);
 
-  const totals = useMemo(() => {
-    if (!rows) return null;
-    const spend = rows.reduce((s, r) => s + r.spend, 0);
-    const revenue = rows.reduce((s, r) => s + r.revenue, 0);
-    const clicks = rows.reduce((s, r) => s + r.clicks, 0);
-    const impressions = rows.reduce((s, r) => s + r.impressions, 0);
-    const conversions = rows.reduce((s, r) => s + r.conversions, 0);
-    return {
-      spend,
-      revenue,
-      roas: spend > 0 ? revenue / spend : 0,
-      ctr: impressions > 0 ? (clicks / impressions) * 100 : 0,
-      cpa: conversions > 0 ? spend / conversions : 0,
-      creatives: rows.length,
-    };
-  }, [rows]);
+  // ── DADOS DE DEMONSTRAÇÃO ────────────────────────────────────────────────
+  const loadDemoData = useCallback(() => {
+    const DEMO_CRIATIVOS = [
+      'VIDEO DEPOIMENTO CLIENTE A',
+      'CARROSSEL BENEFICIOS',
+      'BANNER OFERTA ESPECIAL',
+      'VIDEO EXPLICATIVO PRODUTO',
+      'IMAGEM ESTATICA PROMO',
+    ];
+    const CONSULTORES = ['LUCAS', 'ANA', 'PEDRO', 'MARIANA', 'CARLOS'];
+    const QUALIFS = ['Qualificado', 'Qualificado', 'Qualificado', 'Não Qualificado', 'Não Preenchido'];
 
-  const hasData = Boolean(rows);
+    const demoLeads = Array.from({ length: 120 }, (_, i) => ({
+      criativo: DEMO_CRIATIVOS[i % DEMO_CRIATIVOS.length],
+      consultor: CONSULTORES[i % CONSULTORES.length],
+      qualificado: QUALIFS[Math.floor(i * 7 % QUALIFS.length)],
+      email: `lead${i}@demo.com`,
+    }));
+
+    setDados(demoLeads);
+    setError(null);
+
+    const agrupado = {};
+    demoLeads.forEach(lead => {
+      if (!agrupado[lead.criativo]) {
+        agrupado[lead.criativo] = { nome: lead.criativo, total: 0, qualificados: 0, naoQualificados: 0, naoPreenchidos: 0 };
+      }
+      agrupado[lead.criativo].total++;
+      if (lead.qualificado === 'Qualificado') agrupado[lead.criativo].qualificados++;
+      else if (lead.qualificado === 'Não Qualificado') agrupado[lead.criativo].naoQualificados++;
+      else agrupado[lead.criativo].naoPreenchidos++;
+    });
+
+    const criativosArray = Object.values(agrupado).map(c => {
+      const avaliados = c.qualificados + c.naoQualificados;
+      const taxa = avaliados > 0 ? parseFloat((c.qualificados / avaliados * 100).toFixed(1)) : 0;
+      return { ...c, taxa, badge: taxa >= 15 ? '🟢' : taxa >= 5 ? '🟡' : '🔴' };
+    });
+    criativosArray.sort((a, b) => b.taxa - a.taxa);
+    setCriativos(criativosArray);
+  }, []);
+
+  // ── 5. KPIs CORRETOS ────────────────────────────────────────────────────
+  const calcularKPIs = () => {
+    if (!dados) return {
+      total: 0,
+      qualificados: 0,
+      naoQualificados: 0,
+      naoPreenchidos: 0,
+      taxa: 0,
+    };
+
+    const qualificados = dados.filter(d => d.qualificado === 'Qualificado').length;
+    const naoQualificados = dados.filter(d => d.qualificado === 'Não Qualificado').length;
+    const naoPreenchidos = dados.filter(d => d.qualificado === 'Não Preenchido').length;
+    const avaliados = qualificados + naoQualificados;
+    const taxa = avaliados > 0 ? (qualificados / avaliados * 100).toFixed(1) : 0;
+
+    return {
+      total: dados.length,
+      qualificados,
+      naoQualificados,
+      naoPreenchidos,
+      taxa: parseFloat(taxa),
+    };
+  };
+
+  const kpis = useMemo(calcularKPIs, [dados]);
+  const hasData = Boolean(dados);
 
   return (
     <div style={S.app}>
@@ -221,17 +325,18 @@ export default function App() {
       <header style={S.header}>
         <div style={S.logo}>
           <div style={S.dot} />
-          Creative Dashboard
+          Dashboard de Qualificação
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           {hasData && (
             <span style={S.badge}>
-              {rows.length} criativos
+              {dados.length} leads
             </span>
           )}
           <ExportButton targetId="dashboard-content" disabled={!hasData} />
           <Upload
-            onFile={handleFile}
+            onFile={processarPlanilha}
+            onDemo={loadDemoData}
             loading={loading}
             error={null}
             hasData={hasData}
@@ -241,18 +346,24 @@ export default function App() {
       </header>
 
       <main style={S.main}>
+        {error && (
+          <div style={S.errorBox}>
+            ⚠️ {error}
+          </div>
+        )}
+
         {!hasData ? (
           /* Upload screen */
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: 'calc(100vh - 200px)', gap: 16 }}>
             <div style={S.hero}>
               <h1 style={{ ...S.heroTitle, textAlign: 'center', fontSize: 28 }}>
-                Análise de Performance de Criativos
+                Dashboard de Qualificação de Leads
               </h1>
               <p style={{ ...S.heroSub, textAlign: 'center', fontSize: 14 }}>
-                Carregue seus dados de campanhas para visualizar métricas, ROAS, CTR e rankings
+                Carregue a planilha com as colunas: <strong>Criativo Convertido</strong>, <strong>CONSULTOR</strong>, <strong>QUALIFICADO?</strong>, <strong>Email</strong>
               </p>
             </div>
-            <Upload onFile={handleFile} loading={loading} error={error} hasData={false} onReset={handleReset} />
+            <Upload onFile={processarPlanilha} onDemo={loadDemoData} loading={loading} error={error} hasData={false} onReset={handleReset} />
           </div>
         ) : (
           <div id="dashboard-content">
@@ -260,25 +371,72 @@ export default function App() {
             <div style={{ ...S.section, marginBottom: 32 }}>
               <span style={S.sectionTitle}>Visão Geral</span>
               <div style={S.kpiGrid}>
-                <KPICard title="Investimento" value={fmt.currency(totals.spend)} icon={DollarSign} color="lime" />
-                <KPICard title="Receita" value={fmt.currency(totals.revenue)} icon={TrendingUp} color="emerald" />
-                <KPICard title="ROAS" value={fmt.roas(totals.roas)} icon={Zap} color="amber" />
-                <KPICard title="CTR" value={fmt.pct(totals.ctr)} icon={MousePointerClick} color="sky" />
-                <KPICard title="CPA" value={fmt.currency(totals.cpa)} icon={Eye} color="violet" />
-                <KPICard title="Criativos" value={fmt.number(totals.creatives)} icon={Image} color="rose" />
+                <KPICard title="Total de Leads" value={String(kpis.total)} icon={Users} color="lime" />
+                <KPICard title="Qualificados" value={String(kpis.qualificados)} icon={CheckCircle} color="emerald" />
+                <KPICard title="Não Qualificados" value={String(kpis.naoQualificados)} icon={XCircle} color="rose" />
+                <KPICard title="Taxa de Qualif." value={`${kpis.taxa}%`} icon={TrendingUp} color="sky" />
               </div>
             </div>
 
-            {/* Charts */}
-            <div style={{ ...S.section, marginBottom: 32 }}>
-              <span style={S.sectionTitle}>Análise Visual</span>
-              <Charts rows={rows} />
+            {/* Gráficos + Campeões */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 32 }}>
+              <QualPieChart
+                qualificados={kpis.qualificados}
+                naoQualificados={kpis.naoQualificados}
+                naoPreenchidos={kpis.naoPreenchidos}
+              />
+              <ChampionCards criativos={criativos} />
             </div>
 
-            {/* Table */}
+            {/* Tabela de Criativos */}
             <div style={S.section}>
-              <span style={S.sectionTitle}>Ranking de Criativos</span>
-              <CreativeTable data={rows} />
+              <span style={S.sectionTitle}>Ranking de Criativos por Qualificação</span>
+              <div style={S.tableWrap}>
+                <table style={S.table}>
+                  <thead>
+                    <tr>
+                      <th style={S.th}>#</th>
+                      <th style={S.th}>Criativo</th>
+                      <th style={S.th}>Total Leads</th>
+                      <th style={S.th}>Qualificados</th>
+                      <th style={S.th}>Não Qualificados</th>
+                      <th style={S.th}>Não Preenchidos</th>
+                      <th style={S.th}>Taxa (avaliados)</th>
+                      <th style={S.th}>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {criativos.map((c, i) => (
+                      <tr key={c.nome} style={{ background: i % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.01)' }}>
+                        <td style={{ ...S.td, color: 'var(--text-muted)', fontFamily: 'var(--font-mono)', fontSize: 11 }}>
+                          {i + 1}
+                        </td>
+                        <td style={{ ...S.td, maxWidth: 320, wordBreak: 'break-word', fontWeight: 500 }}>
+                          {c.nome}
+                        </td>
+                        <td style={{ ...S.td, fontFamily: 'var(--font-mono)' }}>
+                          {c.total}
+                        </td>
+                        <td style={{ ...S.td, color: '#4ade80', fontFamily: 'var(--font-mono)' }}>
+                          {c.qualificados}
+                        </td>
+                        <td style={{ ...S.td, color: '#f87171', fontFamily: 'var(--font-mono)' }}>
+                          {c.naoQualificados}
+                        </td>
+                        <td style={{ ...S.td, color: '#fbbf24', fontFamily: 'var(--font-mono)' }}>
+                          {c.naoPreenchidos}
+                        </td>
+                        <td style={{ ...S.td, fontFamily: 'var(--font-mono)', fontWeight: 600 }}>
+                          {c.taxa}%
+                        </td>
+                        <td style={{ ...S.td, fontSize: 16 }}>
+                          {c.badge}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
         )}
