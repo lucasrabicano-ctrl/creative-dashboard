@@ -27,6 +27,19 @@ const normalizarQualificacao = (valor) => {
   return 'Não Preenchido';
 };
 
+// ── Normalização inteligente de criativos ─────────────────────────────────
+const normalizarCriativo = (texto) => {
+  if (!texto) return 'SEM NOME';
+  return String(texto)
+    .toUpperCase()
+    .trim()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')   // remove acentos
+    .replace(/[^\w\s]/g, '')           // remove pontuação e hífens
+    .replace(/\s+/g, ' ')              // colapsa espaços múltiplos
+    .trim();
+};
+
 // ── Estilos ────────────────────────────────────────────────────────────────
 const S = {
   app: {
@@ -209,7 +222,7 @@ export default function App() {
 
       // ── Processar cada linha usando colunas detectadas ─────────────────
       const dadosProcessados = rawData.map(row => ({
-        criativo: String(row[colunaCriativo] || 'SEM NOME').toUpperCase().trim(),
+        criativo: normalizarCriativo(row[colunaCriativo]),
         consultor: String(row[colunaConsultor] || 'SEM CONSULTOR').toUpperCase().trim(),
         qualificado: normalizarQualificacao(row[colunaQualificado] || ''),
         email: String(row[colunaEmail] || '').toLowerCase().trim(),
