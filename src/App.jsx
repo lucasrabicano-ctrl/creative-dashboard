@@ -182,7 +182,7 @@ export default function App() {
           .toUpperCase()
           .trim(),
         qualificado: normalizarQualificacao(row['QUALIFICADO?']),
-        email: (row['Email'] || '').toLowerCase().trim(),
+        email: String(row['Email'] || '').toLowerCase().trim(),
       }));
 
       // Remover duplicatas por email
