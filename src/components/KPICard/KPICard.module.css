@@ -1,0 +1,150 @@
+@keyframes fadeSlideIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes shimmer {
+  0%   { background-position: -400px 0; }
+  100% { background-position: 400px 0; }
+}
+
+.card {
+  position: relative;
+  background: rgba(17, 24, 39, 0.72);
+  backdrop-filter: blur(16px) saturate(1.4);
+  -webkit-backdrop-filter: blur(16px) saturate(1.4);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  padding: 20px;
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  transition: border-color 0.25s, transform 0.25s, box-shadow 0.25s;
+  overflow: hidden;
+  animation: fadeSlideIn 0.4s ease both;
+}
+
+.card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+}
+
+.card:hover {
+  border-color: var(--border-light);
+  transform: translateY(-2px);
+}
+
+/* Color variants - top stripe */
+.color_lime::before { background: var(--accent-lime); }
+.color_sky::before { background: var(--accent-sky); }
+.color_purple::before { background: var(--accent-purple); }
+.color_amber::before { background: var(--accent-amber); }
+.color_rose::before { background: var(--accent-rose); }
+.color_emerald::before { background: var(--accent-emerald); }
+
+/* Color variants - hover glow (box-shadow) */
+.color_lime:hover   { box-shadow: 0 0 0 1px rgba(163,230,53,0.15), 0 8px 24px rgba(163,230,53,0.08); }
+.color_sky:hover    { box-shadow: 0 0 0 1px rgba(56,189,248,0.15),  0 8px 24px rgba(56,189,248,0.08); }
+.color_purple:hover { box-shadow: 0 0 0 1px rgba(167,139,250,0.15), 0 8px 24px rgba(167,139,250,0.08); }
+.color_amber:hover  { box-shadow: 0 0 0 1px rgba(251,191,36,0.15),  0 8px 24px rgba(251,191,36,0.08); }
+.color_rose:hover   { box-shadow: 0 0 0 1px rgba(251,113,133,0.15), 0 8px 24px rgba(251,113,133,0.08); }
+.color_emerald:hover{ box-shadow: 0 0 0 1px rgba(52,211,153,0.15),  0 8px 24px rgba(52,211,153,0.08); }
+
+.iconWrap {
+  flex-shrink: 0;
+  width: 38px;
+  height: 38px;
+  border-radius: var(--radius-lg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+}
+
+.color_lime .iconWrap { color: var(--accent-lime); background: rgba(163, 230, 53, 0.08); border-color: rgba(163, 230, 53, 0.2); }
+.color_sky .iconWrap { color: var(--accent-sky); background: rgba(56, 189, 248, 0.08); border-color: rgba(56, 189, 248, 0.2); }
+.color_purple .iconWrap { color: var(--accent-purple); background: rgba(167, 139, 250, 0.08); border-color: rgba(167, 139, 250, 0.2); }
+.color_amber .iconWrap { color: var(--accent-amber); background: rgba(251, 191, 36, 0.08); border-color: rgba(251, 191, 36, 0.2); }
+.color_rose .iconWrap { color: var(--accent-rose); background: rgba(251, 113, 133, 0.08); border-color: rgba(251, 113, 133, 0.2); }
+.color_emerald .iconWrap { color: var(--accent-emerald); background: rgba(52, 211, 153, 0.08); border-color: rgba(52, 211, 153, 0.2); }
+
+.content {
+  flex: 1;
+  min-width: 0;
+}
+
+.title {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 4px;
+}
+
+.value {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.2;
+  margin-bottom: 6px;
+}
+
+.sub {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.subText {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.trend {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 20px;
+}
+
+.positive {
+  color: var(--accent-emerald);
+  background: rgba(52, 211, 153, 0.1);
+}
+
+.negative {
+  color: var(--accent-rose);
+  background: rgba(251, 113, 133, 0.1);
+}
+
+.neutral {
+  color: var(--text-muted);
+  background: var(--bg-elevated);
+}
+
+.skeleton {
+  height: 28px;
+  border-radius: var(--radius-sm);
+  width: 80%;
+  background: linear-gradient(
+    90deg,
+    var(--bg-elevated) 0%,
+    rgba(255,255,255,0.06) 40%,
+    var(--bg-elevated) 100%
+  );
+  background-size: 800px 100%;
+  animation: shimmer 1.6s ease-in-out infinite;
+}
